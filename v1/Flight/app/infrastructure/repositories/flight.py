@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.flight import FlightDB
@@ -9,11 +9,18 @@ class FlightRepository:
     def __init__(self, db: AsyncSession):
         self._db = db
 
-    async def get_all(self) -> list[FlightDB]:
-        query = select(FlightDB)
+    async def get_all(
+        self, page: int = 1, size: int = 10
+    ) -> tuple[list[FlightDB], int]:
+        count_query = select(func.count()).select_from(FlightDB)
+        count_result = await self._db.execute(count_query)
+        total_elements = count_result.scalar() or 0
+
+        offset = (page - 1) * size
+        query = select(FlightDB).offset(offset).limit(size)
         result = await self._db.execute(query)
         flights = result.scalars().all()
-        return list(flights)
+        return list(flights), total_elements
 
     async def get_by_id(self, id: int) -> FlightDB | None:
         query = select(FlightDB).where(FlightDB.id == id)

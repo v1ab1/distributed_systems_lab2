@@ -36,5 +36,14 @@ class FlightResponse(FlightMeta):
     datetime: datetime
 
 
+class PaginationInfo(BaseModel):
+    page: int
+    pageSize: int
+    totalElements: int
+
+
 class AllFlightsResponse(BaseModel):
-    flights: list[FlightResponse]
+    page: int
+    pageSize: int
+    totalElements: int
+    items: list[FlightResponse]

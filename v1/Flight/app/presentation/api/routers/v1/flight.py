@@ -13,10 +13,14 @@ router = APIRouter(prefix="/v1/flights")
 
 @router.get("")
 async def get_all_flights(
+    page: int = 1,
+    size: int = 10,
     flight_service: FlightService = Depends(get_flight_service),
 ) -> AllFlightsResponse:
-    flights = await flight_service.get_all()
-    return AllFlightsResponse(flights=flights)
+    flights, total_elements = await flight_service.get_all(page, size)
+    return AllFlightsResponse(
+        page=page, pageSize=size, totalElements=total_elements, items=flights
+    )
 
 
 @router.post("", status_code=201)

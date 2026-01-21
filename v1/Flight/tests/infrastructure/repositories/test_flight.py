@@ -57,15 +57,43 @@ class TestFlightRepository:
         assert result is None
 
     def test_get_all(self, flight_repository, mock_db_session, sample_flight):
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [sample_flight]
-        mock_db_session.execute.return_value = mock_result
 
-        result = asyncio.run(flight_repository.get_all())
+        mock_db_session.execute.side_effect = [
+            mock_count_result,
+            mock_result,
+        ]
 
-        mock_db_session.execute.assert_awaited_once()
+        result, total = asyncio.run(flight_repository.get_all(page=1, size=10))
+
+        assert mock_db_session.execute.await_count == 2
         assert len(result) == 1
         assert result[0] == sample_flight
+        assert total == 1
+
+    def test_get_all_with_pagination(
+        self, flight_repository, mock_db_session, sample_flight
+    ):
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 10
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [sample_flight]
+
+        mock_db_session.execute.side_effect = [
+            mock_count_result,
+            mock_result,
+        ]
+
+        result, total = asyncio.run(flight_repository.get_all(page=2, size=5))
+
+        assert mock_db_session.execute.await_count == 2
+        assert len(result) == 1
+        assert total == 10
 
     def test_delete_flight(self, flight_repository, mock_db_session):
         flight_id = 1

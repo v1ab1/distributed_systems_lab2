@@ -32,24 +32,36 @@ class TestFlightService:
         mock_flight_repository.get_by_id.assert_awaited_once_with(flight_id)
 
     def test_get_all_success(self, flight_service, mock_flight_repository, sample_flight):
-        mock_flight_repository.get_all.return_value = [sample_flight]
+        mock_flight_repository.get_all.return_value = ([sample_flight], 1)
 
-        result = asyncio.run(flight_service.get_all())
+        result, total = asyncio.run(flight_service.get_all(page=1, size=10))
 
-        mock_flight_repository.get_all.assert_awaited_once()
+        mock_flight_repository.get_all.assert_awaited_once_with(1, 10)
         assert isinstance(result, list)
         assert len(result) == 1
         assert all(isinstance(flight, FlightResponse) for flight in result)
         assert result[0].id == sample_flight.id
+        assert total == 1
 
     def test_get_all_empty(self, flight_service, mock_flight_repository):
-        mock_flight_repository.get_all.return_value = []
+        mock_flight_repository.get_all.return_value = ([], 0)
 
-        result = asyncio.run(flight_service.get_all())
+        result, total = asyncio.run(flight_service.get_all(page=1, size=10))
 
-        mock_flight_repository.get_all.assert_awaited_once()
+        mock_flight_repository.get_all.assert_awaited_once_with(1, 10)
         assert isinstance(result, list)
         assert len(result) == 0
+        assert total == 0
+
+    def test_get_all_with_pagination(self, flight_service, mock_flight_repository, sample_flight):
+        mock_flight_repository.get_all.return_value = ([sample_flight], 10)
+
+        result, total = asyncio.run(flight_service.get_all(page=2, size=5))
+
+        mock_flight_repository.get_all.assert_awaited_once_with(2, 5)
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert total == 10
 
     def test_save_new_flight_success(self, flight_service, mock_flight_repository):
         flight_meta = FlightMeta(flight_number="AFL032", from_airport_id=1, to_airport_id=2, price=2000)
