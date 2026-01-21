@@ -1,9 +1,13 @@
+import uuid
+
 from typing import cast
+from datetime import datetime
 
 from sqlalchemy import Column, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.privilege import PrivilegeDB
+from app.db.models.privilege_history import PrivilegeHistoryDB
 
 
 class PrivilegeRepository:
@@ -36,3 +40,28 @@ class PrivilegeRepository:
         user.balance = cast(Column[int], balance)
         await self._db.commit()
         await self._db.refresh(user)
+
+    async def create_history_record(
+        self, username: str, ticket_uid: uuid.UUID, balance_diff: int, operation_type: str
+    ) -> None:
+        user = await self.get_user(username)
+        if user is None:
+            return
+        history_record = PrivilegeHistoryDB(
+            privilege_id=user.id,
+            ticket_uid=ticket_uid,
+            datetime=datetime.now(),
+            balance_diff=balance_diff,
+            operation_type=operation_type,
+        )
+        self._db.add(history_record)
+        await self._db.commit()
+
+    async def get_user_history(self, username: str) -> list[PrivilegeHistoryDB]:
+        user = await self.get_user(username)
+        if user is None:
+            return []
+        query = select(PrivilegeHistoryDB).where(PrivilegeHistoryDB.privilege_id == user.id)
+        result = await self._db.execute(query)
+        history = result.scalars().all()
+        return list(history)

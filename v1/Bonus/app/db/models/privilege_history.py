@@ -1,5 +1,3 @@
-import uuid
-
 from sqlalchemy import (
     UUID,
     TIMESTAMP,
@@ -18,7 +16,7 @@ class PrivilegeHistoryDB(Base):
     __tablename__ = "privilege_history"
     id = Column(Integer, primary_key=True)
     privilege_id = Column(Integer, ForeignKey("privilege.id"))
-    ticket_uid = Column(UUID(as_uuid=True), nullable=False, default=uuid.uuid4)
+    ticket_uid = Column(UUID(as_uuid=True), nullable=False)
     datetime = Column(TIMESTAMP, nullable=False)
     balance_diff = Column(Integer, nullable=False)
     operation_type = Column(String(20), nullable=False)

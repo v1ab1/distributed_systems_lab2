@@ -1,10 +1,11 @@
 import uuid
 
-from sqlalchemy import func, select
+from typing import cast
+
+from sqlalchemy import Column, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.ticket import TicketDB
-from app.presentation.api.schemas import TicketMeta
 
 
 class TicketRepository:
@@ -52,6 +53,6 @@ class TicketRepository:
         ticket_db = await self.get_by_ticket_uid(ticket_uid)
         if ticket_db is None:
             return
-        ticket_db.status = "CANCELED"
+        ticket_db.status = cast(Column[str], "CANCELED")
         await self._db.commit()
         await self._db.refresh(ticket_db)

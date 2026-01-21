@@ -18,9 +18,7 @@ async def get_all_flights(
     flight_service: FlightService = Depends(get_flight_service),
 ) -> AllFlightsResponse:
     flights, total_elements = await flight_service.get_all(page, size)
-    return AllFlightsResponse(
-        page=page, pageSize=size, totalElements=total_elements, items=flights
-    )
+    return AllFlightsResponse(page=page, pageSize=size, totalElements=total_elements, items=flights)
 
 
 @router.post("", status_code=201)

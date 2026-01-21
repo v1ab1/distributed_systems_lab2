@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
@@ -28,7 +28,15 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     return JSONResponse(status_code=400, content={"message": "Неверный запрос", "errors": errors})
 
 
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail if isinstance(exc.detail, str) else str(exc.detail)},
+    )
+
+
 def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AirportNotFoundError, airport_not_found_error_handler)  # type: ignore
     app.add_exception_handler(FlightNotFoundError, flight_not_found_error_handler)  # type: ignore
+    app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
     app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore

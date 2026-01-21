@@ -7,8 +7,19 @@ from app.services.enums import TicketStatus
 
 
 class TicketCreateRequest(BaseModel):
-    username: constr(min_length=1, max_length=80)  # type: ignore
-    flight_number: constr(min_length=1, max_length=20)  # type: ignore
+    flightNumber: constr(min_length=1, max_length=20)  # type: ignore
+    price: int
+    paidFromBalance: bool
+
+
+class TicketPurchaseResponse(BaseModel):
+    ticketUid: UUID
+    flightNumber: constr(min_length=1, max_length=20)  # type: ignore
+    price: int
+    paidByMoney: int
+    paidByBonuses: int
+    status: TicketStatus
+    date: datetime
 
 
 class TicketMeta(BaseModel):
@@ -44,6 +55,21 @@ class FlightResponse(FlightMeta):
 
     id: int
     datetime: datetime
+
+
+class GatewayFlightResponse(BaseModel):
+    flightNumber: str
+    fromAirport: str
+    toAirport: str
+    date: str
+    price: int
+
+
+class GatewayAllFlightsResponse(BaseModel):
+    page: int
+    pageSize: int
+    totalElements: int
+    items: list[GatewayFlightResponse]
 
 
 class AllFlightsResponse(BaseModel):

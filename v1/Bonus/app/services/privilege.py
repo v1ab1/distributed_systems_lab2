@@ -1,5 +1,11 @@
+import uuid as uuid_lib
+
+from uuid import UUID
+from typing import cast
+from datetime import datetime
+
 from app.services.exceptions import UserNotFoundError, UsernameAlreadyExistError
-from app.presentation.api.schemas import PrivilegeResponse
+from app.presentation.api.schemas import MeResponse, HistoryItem, PrivilegeResponse
 from app.infrastructure.repositories import PrivilegeRepository
 
 
@@ -45,6 +51,49 @@ class PrivilegeService:
         user = await self._privilege_repository.get_user(username)
 
         if user is None:
-            raise UserNotFoundError(username=username)
+            await self._privilege_repository.create_new_user(username)
+            user = await self._privilege_repository.get_user(username)
+            if user is None:
+                raise UserNotFoundError(username=username)
 
-        await self._privilege_repository.set_balance(username, int(user.balance) + balance)
+        await self._privilege_repository.set_balance(username, int(user.balance or 0) + balance)
+
+    async def create_history_record(
+        self, username: str, ticket_uid: str, balance_diff: int, operation_type: str
+    ) -> None:
+        user = await self._privilege_repository.get_user(username)
+
+        if user is None:
+            await self._privilege_repository.create_new_user(username)
+            user = await self._privilege_repository.get_user(username)
+            if user is None:
+                raise UserNotFoundError(username=username)
+
+        ticket_uuid = uuid_lib.UUID(ticket_uid)
+        await self._privilege_repository.create_history_record(username, ticket_uuid, balance_diff, operation_type)
+
+    async def get_me(self, username: str) -> MeResponse:
+        user = await self._privilege_repository.get_user(username)
+
+        if user is None:
+            await self._privilege_repository.create_new_user(username)
+            user = await self._privilege_repository.get_user(username)
+            if user is None:
+                raise UserNotFoundError(username=username)
+
+        history_records = await self._privilege_repository.get_user_history(username)
+        history = [
+            HistoryItem(
+                date=cast(datetime, record.datetime),
+                ticketUid=cast(UUID, record.ticket_uid),
+                balanceDiff=cast(int, record.balance_diff),
+                operationType=cast(str, record.operation_type),
+            )
+            for record in history_records
+        ]
+
+        return MeResponse(
+            balance=int(user.balance) or 0,
+            status=str(user.status),
+            history=history,
+        )

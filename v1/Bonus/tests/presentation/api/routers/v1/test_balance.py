@@ -119,3 +119,47 @@ class TestBalanceEndpoints:
         )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_history_record_success(self, client, mock_privilege_service):
+        from uuid import uuid4
+
+        username = "testuser"
+        ticket_uid = uuid4()
+        balance_diff = 150
+        operation_type = "FILL_IN_BALANCE"
+        mock_privilege_service.create_history_record.return_value = None
+
+        response = client.post(
+            "/v1/balance/history",
+            json={
+                "ticketUid": str(ticket_uid),
+                "balanceDiff": balance_diff,
+                "operationType": operation_type,
+            },
+            headers={"X-User-Name": username},
+        )
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    def test_create_history_record_missing_header(self, client, mock_privilege_service):
+        from uuid import uuid4
+
+        response = client.post(
+            "/v1/balance/history",
+            json={
+                "ticketUid": str(uuid4()),
+                "balanceDiff": 150,
+                "operationType": "FILL_IN_BALANCE",
+            },
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_create_history_record_invalid_body(self, client, mock_privilege_service):
+        response = client.post(
+            "/v1/balance/history",
+            json={"invalid": "data"},
+            headers={"X-User-Name": "testuser"},
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

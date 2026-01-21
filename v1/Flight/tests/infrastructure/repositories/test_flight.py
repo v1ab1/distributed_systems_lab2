@@ -75,9 +75,7 @@ class TestFlightRepository:
         assert result[0] == sample_flight
         assert total == 1
 
-    def test_get_all_with_pagination(
-        self, flight_repository, mock_db_session, sample_flight
-    ):
+    def test_get_all_with_pagination(self, flight_repository, mock_db_session, sample_flight):
         mock_count_result = MagicMock()
         mock_count_result.scalar.return_value = 10
 

@@ -1,7 +1,10 @@
+import traceback
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
+from app.logger import persons_logger
 from app.services.exceptions import UserNotFoundError, UsernameAlreadyExistError
 
 
@@ -28,7 +31,16 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     return JSONResponse(status_code=400, content={"message": "Неверный запрос", "errors": errors})
 
 
+async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    persons_logger.error(f"Unhandled exception: {exc}", exc_info=True, extra={"traceback": traceback.format_exc()})
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal server error", "error": str(exc)},
+    )
+
+
 def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(UserNotFoundError, person_not_found_error_handler)  # type: ignore
     app.add_exception_handler(UsernameAlreadyExistError, person_already_exist_error_handler)  # type: ignore
     app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore
+    app.add_exception_handler(Exception, general_exception_handler)

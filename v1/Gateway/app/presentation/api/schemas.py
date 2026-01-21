@@ -29,11 +29,12 @@ class FlightMeta(BaseModel):
     price: int
 
 
-class FlightResponse(FlightMeta):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    datetime: datetime
+class FlightResponse(BaseModel):
+    flightNumber: str
+    fromAirport: str
+    toAirport: str
+    date: str
+    price: int
 
 
 class PaginationInfo(BaseModel):
@@ -42,8 +43,86 @@ class PaginationInfo(BaseModel):
     totalElements: int
 
 
-class AllFlightsResponse(BaseModel):
+class PaginationResponse(BaseModel):
     page: int
     pageSize: int
     totalElements: int
     items: list[FlightResponse]
+
+
+class AllFlightsResponse(PaginationResponse):
+    pass
+
+
+class HistoryItem(BaseModel):
+    date: datetime
+    ticketUid: str
+    balanceDiff: int
+    operationType: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MeResponse(BaseModel):
+    balance: int
+    status: str
+    history: list[HistoryItem]
+
+
+class SetBalanceRequest(BaseModel):
+    balance: int
+
+
+class CreateHistoryRequest(BaseModel):
+    ticketUid: str
+    balanceDiff: int
+    operationType: str
+
+
+class TicketCreateRequest(BaseModel):
+    flightNumber: str
+    price: int
+    paidFromBalance: bool
+
+
+class TicketResponse(BaseModel):
+    ticketUid: str
+    flightNumber: str
+    fromAirport: str
+    toAirport: str
+    date: str
+    price: int
+    status: str
+
+
+class PrivilegeShortInfo(BaseModel):
+    balance: int
+    status: str
+
+
+class TicketPurchaseResponse(BaseModel):
+    ticketUid: str
+    flightNumber: str
+    fromAirport: str
+    toAirport: str
+    date: str
+    price: int
+    paidByMoney: int
+    paidByBonuses: int
+    status: str
+    privilege: PrivilegeShortInfo
+
+
+class UserInfoResponse(BaseModel):
+    tickets: list[TicketResponse]
+    privilege: PrivilegeShortInfo
+
+
+class PrivilegeInfoResponse(BaseModel):
+    balance: int
+    status: str
+    history: list[HistoryItem]
+
+
+class ErrorResponse(BaseModel):
+    message: str
