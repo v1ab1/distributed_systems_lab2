@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from app.db.models.flight import FlightDB
 from app.services.exceptions import FlightNotFoundError
 from app.presentation.api.schemas import FlightMeta, FlightResponse
@@ -21,7 +23,9 @@ class FlightService:
         return flights
 
     async def save_new_flight(self, flight: FlightMeta) -> int:
-        flight_db = FlightDB(**flight.model_dump())
+        flight_data = flight.model_dump()
+        flight_data["datetime"] = datetime.now(UTC)
+        flight_db = FlightDB(**flight_data)
         return await self._flight_repository.save_new_flight(flight_db)
 
     async def update_flight(self, id: int, flight: FlightMeta) -> None:

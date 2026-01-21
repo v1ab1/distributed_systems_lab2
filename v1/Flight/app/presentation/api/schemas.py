@@ -34,3 +34,7 @@ class FlightResponse(FlightMeta):
 
     id: int
     datetime: datetime
+
+
+class AllFlightsResponse(BaseModel):
+    flights: list[FlightResponse]

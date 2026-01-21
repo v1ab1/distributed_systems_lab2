@@ -1,14 +1,55 @@
-from fastapi import APIRouter
+from fastapi import Depends, Response, APIRouter
 
-# from app.presentation.api.schemas import SetBalanceRequest
+from app.dependencies import get_flight_service
+from app.services.flight import FlightService
+from app.presentation.api.schemas import (
+    FlightMeta,
+    FlightResponse,
+    AllFlightsResponse,
+)
 
-router = APIRouter(prefix="/v1/balance")
+router = APIRouter(prefix="/v1/flights")
 
 
-# @router.post("", status_code=204)
-# async def set_user_balance(
-#     body: SetBalanceRequest,
-#     username: str = Header(..., description="Имя пользователя", alias="X-User-Name"),
-#     privilege_service: FlightService = Depends(get_flight_service),
-# ) -> None:
-#     return None
+@router.get("")
+async def get_all_flights(
+    flight_service: FlightService = Depends(get_flight_service),
+) -> AllFlightsResponse:
+    flights = await flight_service.get_all()
+    return AllFlightsResponse(flights=flights)
+
+
+@router.post("", status_code=201)
+async def save_new_flight(
+    body: FlightMeta,
+    response: Response,
+    flight_service: FlightService = Depends(get_flight_service),
+) -> None:
+    flight_id = await flight_service.save_new_flight(body)
+    response.headers["Location"] = f"/api/v1/flights/{flight_id}"
+    return None
+
+
+@router.get("/{flight_id}")
+async def get_flight_by_id(
+    flight_id: int,
+    flight_service: FlightService = Depends(get_flight_service),
+) -> FlightResponse | None:
+    return await flight_service.get_by_id(flight_id)
+
+
+@router.patch("/{flight_id}", status_code=200)
+async def update_flight_by_id(
+    flight_id: int,
+    body: FlightMeta,
+    flight_service: FlightService = Depends(get_flight_service),
+) -> None:
+    await flight_service.update_flight(flight_id, body)
+
+
+@router.delete("/{flight_id}", status_code=204)
+async def delete_flight_by_id(
+    flight_id: int,
+    flight_service: FlightService = Depends(get_flight_service),
+) -> None:
+    await flight_service.delete_flight(flight_id)

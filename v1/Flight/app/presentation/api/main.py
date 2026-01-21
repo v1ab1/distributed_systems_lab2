@@ -14,6 +14,9 @@ async def lifespan(app: FastAPI):  # type: ignore
     persons_logger.info("Запуск приложения...")
     try:
         await init_db()
+        from app.db.engine import seed_database
+
+        await seed_database()
     except Exception as e:
         persons_logger.error(f"Ошибка при инициализации БД: {e}", exc_info=True)
         raise
@@ -23,7 +26,7 @@ async def lifespan(app: FastAPI):  # type: ignore
 
 app = FastAPI(
     title="Persons services",
-    description="Сервис, который предоставляет CRUD операции над пользователями",
+    description=("Сервис, который предоставляет CRUD операции над пользователями"),
     version="1.0",
     docs_url="/docs",
     redoc_url="/redoc",
