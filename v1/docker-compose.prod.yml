@@ -34,7 +34,7 @@ services:
       - |
         chmod +x /init.sh
         echo 'Waiting for postgres to be ready...'
-        until pg_isready -h postgres -U "${POSTGRES_USER}"; do
+        until pg_isready -h postgres -U "${POSTGRES_USER:-program}" -d postgres; do
           echo 'Waiting for postgres...'
           sleep 1
         done
