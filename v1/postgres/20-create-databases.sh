@@ -10,22 +10,35 @@ APP_USER="program"
 
 echo "Superuser: $SUPERUSER"
 echo "App user: $APP_USER"
-echo "Connecting to database: postgres"
 
 # Устанавливаем пароль для подключения
 export PGPASSWORD="$DB_PASSWORD"
 
-# Проверяем подключение к базе postgres
+# Определяем, к какой базе данных подключаться
+# Сначала пробуем postgres, если не получается - используем template1
+TARGET_DB="postgres"
 echo "Testing connection to postgres database..."
-until psql -h postgres -U "$SUPERUSER" -d postgres -c "SELECT 1" > /dev/null 2>&1; do
-  echo "Waiting for postgres database to be accessible..."
-  sleep 1
-done
-echo "Connection to postgres database successful"
+if ! psql -h postgres -U "$SUPERUSER" -d postgres -c "SELECT 1" > /dev/null 2>&1; then
+  echo "Database 'postgres' not accessible, trying 'template1'..."
+  if psql -h postgres -U "$SUPERUSER" -d template1 -c "SELECT 1" > /dev/null 2>&1; then
+    TARGET_DB="template1"
+    echo "Using template1 database"
+  else
+    echo "Waiting for PostgreSQL to be ready..."
+    until psql -h postgres -U "$SUPERUSER" -d template1 -c "SELECT 1" > /dev/null 2>&1; do
+      echo "Waiting for PostgreSQL..."
+      sleep 1
+    done
+    TARGET_DB="template1"
+    echo "PostgreSQL is ready, using template1 database"
+  fi
+else
+  echo "Connection to postgres database successful"
+fi
 
 # Сначала создаем пользователя program, если его нет
 echo "Creating user $APP_USER if not exists..."
-psql -h postgres -U "$SUPERUSER" -d postgres <<EOSQL || true
+psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" <<EOSQL || true
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$APP_USER') THEN
@@ -41,7 +54,7 @@ EOSQL
 
 # Создаем базы данных, если они не существуют
 echo "Creating databases if they don't exist..."
-psql -h postgres -U "$SUPERUSER" -d postgres <<EOSQL
+psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" <<EOSQL
 SELECT 'CREATE DATABASE tickets'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tickets')\gexec
 
