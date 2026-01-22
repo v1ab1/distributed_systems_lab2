@@ -14,27 +14,17 @@ echo "App user: $APP_USER"
 # Устанавливаем пароль для подключения
 export PGPASSWORD="$DB_PASSWORD"
 
-# Определяем, к какой базе данных подключаться
-# Сначала пробуем postgres, если не получается - используем template1
-TARGET_DB="postgres"
-echo "Testing connection to postgres database..."
-if ! psql -h postgres -U "$SUPERUSER" -d postgres -c "SELECT 1" > /dev/null 2>&1; then
-  echo "Database 'postgres' not accessible, trying 'template1'..."
-  if psql -h postgres -U "$SUPERUSER" -d template1 -c "SELECT 1" > /dev/null 2>&1; then
-    TARGET_DB="template1"
-    echo "Using template1 database"
-  else
-    echo "Waiting for PostgreSQL to be ready..."
-    until psql -h postgres -U "$SUPERUSER" -d template1 -c "SELECT 1" > /dev/null 2>&1; do
-      echo "Waiting for PostgreSQL..."
-      sleep 1
-    done
-    TARGET_DB="template1"
-    echo "PostgreSQL is ready, using template1 database"
-  fi
-else
-  echo "Connection to postgres database successful"
-fi
+# Используем template1, так как он всегда существует в PostgreSQL
+TARGET_DB="template1"
+echo "Using template1 database (always exists in PostgreSQL)"
+
+# Проверяем подключение к PostgreSQL
+echo "Testing connection to PostgreSQL..."
+until psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -c "SELECT 1" > /dev/null 2>&1; do
+  echo "Waiting for PostgreSQL to be ready..."
+  sleep 1
+done
+echo "PostgreSQL is ready"
 
 # Сначала создаем пользователя program, если его нет
 echo "Creating user $APP_USER if not exists..."

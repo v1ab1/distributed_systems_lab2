@@ -13,7 +13,7 @@ services:
     networks:
       - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-program} -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-program} -d template1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,7 +34,8 @@ services:
       - |
         chmod +x /init.sh
         echo 'Waiting for postgres to be ready...'
-        until pg_isready -h postgres -U "${POSTGRES_USER:-program}" -d postgres; do
+        # Используем template1, так как он всегда существует
+        until pg_isready -h postgres -U "${POSTGRES_USER:-program}" -d template1; do
           echo 'Waiting for postgres...'
           sleep 1
         done
