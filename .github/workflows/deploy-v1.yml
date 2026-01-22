@@ -136,8 +136,9 @@ jobs:
           ssh $SERVER_USER@$SERVER_HOST bash -s << ENDSSH
             set -e
             
-            # Переходим в директорию проекта
-            cd ~/v1-app || mkdir -p ~/v1-app && cd ~/v1-app
+            # Создаем директорию проекта
+            mkdir -p ~/v1-app
+            cd ~/v1-app
             
             # Логинимся в GitHub Container Registry
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
@@ -151,10 +152,24 @@ jobs:
             # Создаем директорию для SQL скриптов
             mkdir -p postgres
             
-            # Скачиваем SQL скрипт
+            # Скачиваем SQL скрипт (если файл существует в репозитории)
             curl -f -o postgres/10-create-user-and-db.sql https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/v1/postgres/10-create-user-and-db.sql || {
-              echo "Ошибка: не удалось скачать SQL скрипт"
-              exit 1
+              echo "Предупреждение: не удалось скачать SQL скрипт, создаем базовый скрипт"
+              cat > postgres/10-create-user-and-db.sql << 'SQLSCRIPT'
+-- Создание пользователя
+CREATE ROLE program WITH PASSWORD 'test';
+ALTER ROLE program WITH LOGIN;
+
+-- Создание баз данных
+CREATE DATABASE tickets;
+GRANT ALL PRIVILEGES ON DATABASE tickets TO program;
+
+CREATE DATABASE flights;
+GRANT ALL PRIVILEGES ON DATABASE flights TO program;
+
+CREATE DATABASE privileges;
+GRANT ALL PRIVILEGES ON DATABASE privileges TO program;
+SQLSCRIPT
             }
             
             # Проверяем, что файлы скачались
