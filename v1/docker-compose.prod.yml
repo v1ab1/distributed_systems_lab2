@@ -1,0 +1,105 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: v1_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-program}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-test}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/:/docker-entrypoint-initdb.d/
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-program}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  flight:
+    image: ${FLIGHT_DOCKER_IMAGE:-flight-app:latest}
+    container_name: v1_flight
+    restart: always
+    ports:
+      - "${FLIGHT_PORT:-8060}:8060"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-program}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-test}
+      DB_NAME: flights
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  bonus:
+    image: ${BONUS_DOCKER_IMAGE:-bonus-app:latest}
+    container_name: v1_bonus
+    restart: always
+    ports:
+      - "${BONUS_PORT:-8050}:8050"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-program}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-test}
+      DB_NAME: privileges
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  ticket:
+    image: ${TICKET_DOCKER_IMAGE:-ticket-app:latest}
+    container_name: v1_ticket
+    restart: always
+    ports:
+      - "${TICKET_PORT:-8070}:8070"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-program}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-test}
+      DB_NAME: tickets
+      GATEWAY_SERVICE_URL: http://gateway:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gateway:
+        condition: service_started
+    networks:
+      - app_network
+
+  gateway:
+    image: ${GATEWAY_DOCKER_IMAGE:-gateway-app:latest}
+    container_name: v1_gateway
+    restart: always
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      FLIGHT_SERVICE_URL: http://flight:8060
+      TICKET_SERVICE_URL: http://ticket:8070
+      BONUS_SERVICE_URL: http://bonus:8050
+    depends_on:
+      flight:
+        condition: service_started
+      ticket:
+        condition: service_started
+      bonus:
+        condition: service_started
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge
