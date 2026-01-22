@@ -30,7 +30,7 @@
 10. В [classroom.yml](.github/workflows/classroom.yml) дописать шаги на сборку и прогон unit-тестов.
 11. Для автоматических прогонов тестов в файле [autograding.json](.github/classroom/autograding.json)
     и [classroom.yml](.github/workflows/classroom.yml) заменить `<variant>` на ваш вариант.
-
+ 
 ### Пояснения
 
 1. Для разработки можно использовать Postgres в docker, для этого нужно запустить docker compose up -d, поднимется
