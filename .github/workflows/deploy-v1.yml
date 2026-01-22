@@ -3,8 +3,6 @@ name: Deploy v1 to Yandex Cloud
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'v1/**'
     branches:
       - main
       - master
