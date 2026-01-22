@@ -152,7 +152,7 @@ jobs:
             # Создаем директорию для SQL скриптов
             mkdir -p postgres
             
-            # Скачиваем SQL скрипт (если файл существует в репозитории)
+            # Скачиваем SQL скрипт для инициализации
             curl -f -o postgres/10-create-user-and-db.sql https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/v1/postgres/10-create-user-and-db.sql || {
               echo "Предупреждение: не удалось скачать SQL скрипт, создаем базовый скрипт"
               echo "-- Создание пользователя" > postgres/10-create-user-and-db.sql
@@ -169,6 +169,31 @@ jobs:
               echo "CREATE DATABASE privileges;" >> postgres/10-create-user-and-db.sql
               echo "GRANT ALL PRIVILEGES ON DATABASE privileges TO program;" >> postgres/10-create-user-and-db.sql
             }
+            
+            # Скачиваем скрипт для создания баз данных (для init-контейнера)
+            curl -f -o postgres/20-create-databases.sh https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/v1/postgres/20-create-databases.sh || {
+              echo "Предупреждение: не удалось скачать скрипт создания БД, создаем базовый скрипт"
+              echo '#!/bin/bash' > postgres/20-create-databases.sh
+              echo 'set -e' >> postgres/20-create-databases.sh
+              echo 'PGPASSWORD="${POSTGRES_PASSWORD:-test}" psql -h postgres -U "${POSTGRES_USER:-program}" -d postgres <<EOSQL' >> postgres/20-create-databases.sh
+              echo 'DO \$\$' >> postgres/20-create-databases.sh
+              echo 'BEGIN' >> postgres/20-create-databases.sh
+              echo '    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '\''program'\'') THEN' >> postgres/20-create-databases.sh
+              echo '        CREATE ROLE program WITH PASSWORD '\''test'\'';' >> postgres/20-create-databases.sh
+              echo '        ALTER ROLE program WITH LOGIN;' >> postgres/20-create-databases.sh
+              echo '    END IF;' >> postgres/20-create-databases.sh
+              echo 'END' >> postgres/20-create-databases.sh
+              echo '\$\$;' >> postgres/20-create-databases.sh
+              echo 'SELECT '\''CREATE DATABASE tickets'\'' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '\''tickets'\'')\gexec' >> postgres/20-create-databases.sh
+              echo 'SELECT '\''CREATE DATABASE flights'\'' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '\''flights'\'')\gexec' >> postgres/20-create-databases.sh
+              echo 'SELECT '\''CREATE DATABASE privileges'\'' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '\''privileges'\'')\gexec' >> postgres/20-create-databases.sh
+              echo 'GRANT ALL PRIVILEGES ON DATABASE tickets TO program;' >> postgres/20-create-databases.sh
+              echo 'GRANT ALL PRIVILEGES ON DATABASE flights TO program;' >> postgres/20-create-databases.sh
+              echo 'GRANT ALL PRIVILEGES ON DATABASE privileges TO program;' >> postgres/20-create-databases.sh
+              echo 'EOSQL' >> postgres/20-create-databases.sh
+              chmod +x postgres/20-create-databases.sh
+            }
+            chmod +x postgres/20-create-databases.sh
             
             # Проверяем, что файлы скачались
             if [ ! -s docker-compose.prod.yml ]; then

@@ -9,14 +9,45 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/:/docker-entrypoint-initdb.d/
+      - ./postgres/10-create-user-and-db.sql:/docker-entrypoint-initdb.d/10-create-user-and-db.sql
     networks:
       - app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-program}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
+
+  postgres-init:
+    image: postgres:13
+    container_name: v1_postgres_init
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-program}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-test}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-test}
+    volumes:
+      - ./postgres/20-create-databases.sh:/init.sh
+    command: >
+      sh -c "
+      chmod +x /init.sh
+      echo 'Waiting for postgres to be ready...'
+      until pg_isready -h postgres -U ${POSTGRES_USER:-program}; do
+        echo 'Waiting for postgres...'
+        sleep 1
+      done
+      echo 'Postgres is ready, waiting a bit more...'
+      sleep 3
+      echo 'Creating databases...'
+      /init.sh
+      echo 'Databases created successfully'
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: "no"
 
   flight:
     image: ${FLIGHT_DOCKER_IMAGE:-flight-app:latest}
@@ -33,6 +64,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-init:
+        condition: service_started
+    command: >
+      sh -c "
+      echo 'Waiting for flights database...'
+      until PGPASSWORD=${POSTGRES_PASSWORD:-test} psql -h postgres -U ${POSTGRES_USER:-program} -d flights -c 'SELECT 1' > /dev/null 2>&1; do
+        echo 'Database not ready, waiting...'
+        sleep 2
+      done
+      echo 'Database ready, starting application...'
+      uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8060
+      "
     networks:
       - app_network
 
@@ -51,6 +94,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-init:
+        condition: service_started
+    command: >
+      sh -c "
+      echo 'Waiting for privileges database...'
+      until PGPASSWORD=${POSTGRES_PASSWORD:-test} psql -h postgres -U ${POSTGRES_USER:-program} -d privileges -c 'SELECT 1' > /dev/null 2>&1; do
+        echo 'Database not ready, waiting...'
+        sleep 2
+      done
+      echo 'Database ready, starting application...'
+      uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8050
+      "
     networks:
       - app_network
 
@@ -70,6 +125,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-init:
+        condition: service_started
+    command: >
+      sh -c "
+      echo 'Waiting for tickets database...'
+      until PGPASSWORD=${POSTGRES_PASSWORD:-test} psql -h postgres -U ${POSTGRES_USER:-program} -d tickets -c 'SELECT 1' > /dev/null 2>&1; do
+        echo 'Database not ready, waiting...'
+        sleep 2
+      done
+      echo 'Database ready, starting application...'
+      uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8070
+      "
     networks:
       - app_network
 
