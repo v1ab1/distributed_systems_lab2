@@ -155,21 +155,19 @@ jobs:
             # Скачиваем SQL скрипт (если файл существует в репозитории)
             curl -f -o postgres/10-create-user-and-db.sql https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/v1/postgres/10-create-user-and-db.sql || {
               echo "Предупреждение: не удалось скачать SQL скрипт, создаем базовый скрипт"
-              cat > postgres/10-create-user-and-db.sql << 'SQLSCRIPT'
--- Создание пользователя
-CREATE ROLE program WITH PASSWORD 'test';
-ALTER ROLE program WITH LOGIN;
-
--- Создание баз данных
-CREATE DATABASE tickets;
-GRANT ALL PRIVILEGES ON DATABASE tickets TO program;
-
-CREATE DATABASE flights;
-GRANT ALL PRIVILEGES ON DATABASE flights TO program;
-
-CREATE DATABASE privileges;
-GRANT ALL PRIVILEGES ON DATABASE privileges TO program;
-SQLSCRIPT
+              echo "-- Создание пользователя" > postgres/10-create-user-and-db.sql
+              echo "CREATE ROLE program WITH PASSWORD 'test';" >> postgres/10-create-user-and-db.sql
+              echo "ALTER ROLE program WITH LOGIN;" >> postgres/10-create-user-and-db.sql
+              echo "" >> postgres/10-create-user-and-db.sql
+              echo "-- Создание баз данных" >> postgres/10-create-user-and-db.sql
+              echo "CREATE DATABASE tickets;" >> postgres/10-create-user-and-db.sql
+              echo "GRANT ALL PRIVILEGES ON DATABASE tickets TO program;" >> postgres/10-create-user-and-db.sql
+              echo "" >> postgres/10-create-user-and-db.sql
+              echo "CREATE DATABASE flights;" >> postgres/10-create-user-and-db.sql
+              echo "GRANT ALL PRIVILEGES ON DATABASE flights TO program;" >> postgres/10-create-user-and-db.sql
+              echo "" >> postgres/10-create-user-and-db.sql
+              echo "CREATE DATABASE privileges;" >> postgres/10-create-user-and-db.sql
+              echo "GRANT ALL PRIVILEGES ON DATABASE privileges TO program;" >> postgres/10-create-user-and-db.sql
             }
             
             # Проверяем, что файлы скачались
