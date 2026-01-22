@@ -28,20 +28,21 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-test}
     volumes:
       - ./postgres/20-create-databases.sh:/init.sh
-    command: >
-      sh -c "
-      chmod +x /init.sh
-      echo 'Waiting for postgres to be ready...'
-      until pg_isready -h postgres -U \"$$POSTGRES_USER\"; do
-        echo 'Waiting for postgres...'
-        sleep 1
-      done
-      echo 'Postgres is ready, waiting a bit more...'
-      sleep 3
-      echo 'Creating databases...'
-      /init.sh
-      echo 'Databases created successfully'
-      "
+    command:
+      - sh
+      - -c
+      - |
+        chmod +x /init.sh
+        echo 'Waiting for postgres to be ready...'
+        until pg_isready -h postgres -U "${POSTGRES_USER}"; do
+          echo 'Waiting for postgres...'
+          sleep 1
+        done
+        echo 'Postgres is ready, waiting a bit more...'
+        sleep 3
+        echo 'Creating databases...'
+        /init.sh
+        echo 'Databases created successfully'
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,17 +67,18 @@ services:
         condition: service_healthy
       postgres-init:
         condition: service_started
-    command: >
-      sh -c "
-      echo 'Waiting for flights database...'
-      export PGPASSWORD=\"$$POSTGRES_PASSWORD\"
-      until psql -h postgres -U \"$$POSTGRES_USER\" -d flights -c 'SELECT 1' > /dev/null 2>&1; do
-        echo 'Database not ready, waiting...'
-        sleep 2
-      done
-      echo 'Database ready, starting application...'
-      uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8060
-      "
+    command:
+      - sh
+      - -c
+      - |
+        echo 'Waiting for flights database...'
+        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        until psql -h postgres -U "${POSTGRES_USER}" -d flights -c 'SELECT 1' > /dev/null 2>&1; do
+          echo 'Database not ready, waiting...'
+          sleep 2
+        done
+        echo 'Database ready, starting application...'
+        uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8060
     networks:
       - app_network
 
@@ -97,17 +99,18 @@ services:
         condition: service_healthy
       postgres-init:
         condition: service_started
-    command: >
-      sh -c "
-      echo 'Waiting for privileges database...'
-      export PGPASSWORD=\"$$POSTGRES_PASSWORD\"
-      until psql -h postgres -U \"$$POSTGRES_USER\" -d privileges -c 'SELECT 1' > /dev/null 2>&1; do
-        echo 'Database not ready, waiting...'
-        sleep 2
-      done
-      echo 'Database ready, starting application...'
-      uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8050
-      "
+    command:
+      - sh
+      - -c
+      - |
+        echo 'Waiting for privileges database...'
+        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        until psql -h postgres -U "${POSTGRES_USER}" -d privileges -c 'SELECT 1' > /dev/null 2>&1; do
+          echo 'Database not ready, waiting...'
+          sleep 2
+        done
+        echo 'Database ready, starting application...'
+        uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8050
     networks:
       - app_network
 
@@ -129,17 +132,18 @@ services:
         condition: service_healthy
       postgres-init:
         condition: service_started
-    command: >
-      sh -c "
-      echo 'Waiting for tickets database...'
-      export PGPASSWORD=\"$$POSTGRES_PASSWORD\"
-      until psql -h postgres -U \"$$POSTGRES_USER\" -d tickets -c 'SELECT 1' > /dev/null 2>&1; do
-        echo 'Database not ready, waiting...'
-        sleep 2
-      done
-      echo 'Database ready, starting application...'
-      uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8070
-      "
+    command:
+      - sh
+      - -c
+      - |
+        echo 'Waiting for tickets database...'
+        export PGPASSWORD="${POSTGRES_PASSWORD}"
+        until psql -h postgres -U "${POSTGRES_USER}" -d tickets -c 'SELECT 1' > /dev/null 2>&1; do
+          echo 'Database not ready, waiting...'
+          sleep 2
+        done
+        echo 'Database ready, starting application...'
+        uvicorn app.presentation.api.main:app --host 0.0.0.0 --port 8070
     networks:
       - app_network
 
