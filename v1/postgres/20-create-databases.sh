@@ -44,17 +44,34 @@ EOSQL
 
 # Создаем базы данных, если они не существуют
 echo "Creating databases if they don't exist..."
+
+# Проверяем и создаем базу данных tickets
+if ! psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -tc "SELECT 1 FROM pg_database WHERE datname = 'tickets'" | grep -q 1; then
+  echo "Creating database tickets..."
+  psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -c "CREATE DATABASE tickets"
+else
+  echo "Database tickets already exists"
+fi
+
+# Проверяем и создаем базу данных flights
+if ! psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -tc "SELECT 1 FROM pg_database WHERE datname = 'flights'" | grep -q 1; then
+  echo "Creating database flights..."
+  psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -c "CREATE DATABASE flights"
+else
+  echo "Database flights already exists"
+fi
+
+# Проверяем и создаем базу данных privileges
+if ! psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -tc "SELECT 1 FROM pg_database WHERE datname = 'privileges'" | grep -q 1; then
+  echo "Creating database privileges..."
+  psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" -c "CREATE DATABASE privileges"
+else
+  echo "Database privileges already exists"
+fi
+
+# Выдаем права
+echo "Granting privileges..."
 psql -h postgres -U "$SUPERUSER" -d "$TARGET_DB" <<EOSQL
-SELECT 'CREATE DATABASE tickets'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tickets')\gexec
-
-SELECT 'CREATE DATABASE flights'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'flights')\gexec
-
-SELECT 'CREATE DATABASE privileges'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'privileges')\gexec
-
--- Выдаем права
 GRANT ALL PRIVILEGES ON DATABASE tickets TO $APP_USER;
 GRANT ALL PRIVILEGES ON DATABASE flights TO $APP_USER;
 GRANT ALL PRIVILEGES ON DATABASE privileges TO $APP_USER;

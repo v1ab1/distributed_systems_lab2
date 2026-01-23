@@ -73,8 +73,8 @@ services:
       - -c
       - |
         echo 'Waiting for flights database...'
-        export PGPASSWORD="${POSTGRES_PASSWORD}"
-        until psql -h postgres -U "${POSTGRES_USER}" -d flights -c 'SELECT 1' > /dev/null 2>&1; do
+        export PGPASSWORD="$DB_PASSWORD"
+        until psql -h postgres -U "$DB_USER" -d flights -c 'SELECT 1' > /dev/null 2>&1; do
           echo 'Database not ready, waiting...'
           sleep 2
         done
@@ -105,8 +105,8 @@ services:
       - -c
       - |
         echo 'Waiting for privileges database...'
-        export PGPASSWORD="${POSTGRES_PASSWORD}"
-        until psql -h postgres -U "${POSTGRES_USER}" -d privileges -c 'SELECT 1' > /dev/null 2>&1; do
+        export PGPASSWORD="$DB_PASSWORD"
+        until psql -h postgres -U "$DB_USER" -d privileges -c 'SELECT 1' > /dev/null 2>&1; do
           echo 'Database not ready, waiting...'
           sleep 2
         done
@@ -138,8 +138,8 @@ services:
       - -c
       - |
         echo 'Waiting for tickets database...'
-        export PGPASSWORD="${POSTGRES_PASSWORD}"
-        until psql -h postgres -U "${POSTGRES_USER}" -d tickets -c 'SELECT 1' > /dev/null 2>&1; do
+        export PGPASSWORD="$DB_PASSWORD"
+        until psql -h postgres -U "$DB_USER" -d tickets -c 'SELECT 1' > /dev/null 2>&1; do
           echo 'Database not ready, waiting...'
           sleep 2
         done
