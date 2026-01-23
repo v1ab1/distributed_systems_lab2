@@ -123,6 +123,7 @@ jobs:
           SERVER_USER: ${{ secrets.SERVER_USER }}
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT || '5432' }}
           GATEWAY_PORT: ${{ secrets.GATEWAY_PORT || '8080' }}
           FLIGHT_PORT: ${{ secrets.FLIGHT_PORT || '8060' }}
           TICKET_PORT: ${{ secrets.TICKET_PORT || '8070' }}
@@ -204,6 +205,7 @@ jobs:
             # Создаем .env файл
             echo "POSTGRES_USER=$POSTGRES_USER" > .env
             echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> .env
+            echo "POSTGRES_PORT=$POSTGRES_PORT" >> .env
             echo "GATEWAY_PORT=$GATEWAY_PORT" >> .env
             echo "FLIGHT_PORT=$FLIGHT_PORT" >> .env
             echo "TICKET_PORT=$TICKET_PORT" >> .env
