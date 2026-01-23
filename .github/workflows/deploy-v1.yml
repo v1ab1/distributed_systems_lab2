@@ -264,6 +264,7 @@ jobs:
       - name: Run Postman tests
         env:
           GATEWAY_PORT: ${{ secrets.GATEWAY_PORT || '8080' }}
+        working-directory: .
         run: |
           # Создаем environment файл с локальным URL
           cat > /tmp/postman-env.json << EOF
@@ -283,9 +284,20 @@ jobs:
           
           echo "Running Postman tests against http://localhost:$GATEWAY_PORT"
           echo "Service status before tests:"
-          cd v1 && docker compose -f docker-compose.prod.yml ps
+          (cd v1 && docker compose -f docker-compose.prod.yml ps)
           
-          # Запускаем Postman тесты
+          # Проверяем наличие файла коллекции
+          if [ ! -f "v1/postman/collection.json" ]; then
+            echo "❌ Postman collection not found at v1/postman/collection.json"
+            echo "Current directory: $(pwd)"
+            echo "Files in v1/postman/:"
+            ls -la v1/postman/ || echo "Directory v1/postman/ does not exist"
+            exit 1
+          fi
+          
+          echo "Found Postman collection at v1/postman/collection.json"
+          
+          # Запускаем Postman тесты (из корня репозитория)
           newman run v1/postman/collection.json \
             -e /tmp/postman-env.json \
             --reporters cli,html \
@@ -295,8 +307,7 @@ jobs:
             --bail || {
               echo "❌ Postman tests failed!"
               echo "Service logs:"
-              cd v1
-              docker compose -f docker-compose.prod.yml logs --tail=100
+              (cd v1 && docker compose -f docker-compose.prod.yml logs --tail=100)
               exit 1
             }
           
