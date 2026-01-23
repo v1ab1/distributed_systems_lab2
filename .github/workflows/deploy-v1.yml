@@ -162,23 +162,104 @@ jobs:
           # Запускаем сервисы
           docker compose -f docker-compose.prod.yml up -d
           
-          # Ждем готовности сервисов
+          # Показываем статус контейнеров
+          echo "Container status:"
+          docker compose -f docker-compose.prod.yml ps
+          
+          # Ждем завершения postgres-init
+          echo "Waiting for postgres-init to complete..."
+          for i in {1..60}; do
+            INIT_STATUS=$(docker compose -f docker-compose.prod.yml ps postgres-init --format json 2>/dev/null | grep -o '"State":"[^"]*"' | cut -d'"' -f4 || echo "not_found")
+            if [ "$INIT_STATUS" = "exited" ] || [ "$INIT_STATUS" = "not_found" ]; then
+              echo "✅ postgres-init completed or not found"
+              if [ "$INIT_STATUS" = "exited" ]; then
+                echo "postgres-init logs:"
+                docker compose -f docker-compose.prod.yml logs postgres-init
+              fi
+              break
+            fi
+            echo "Waiting for postgres-init... ($i/60)"
+            sleep 2
+          done
+          
+          # Проверяем, что базы данных созданы
+          echo "Checking if databases exist..."
+          docker compose -f docker-compose.prod.yml exec -T postgres psql -U $POSTGRES_USER -d template1 -c "\l" || echo "Warning: Could not check databases"
+          
+          # Ждем готовности всех сервисов
           echo "Waiting for services to be ready..."
+          
+          # Проверяем Flight
+          echo "Checking Flight service..."
+          for i in {1..60}; do
+            if curl -f http://localhost:$FLIGHT_PORT/docs > /dev/null 2>&1; then
+              echo "✅ Flight is ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ Flight service is not ready!"
+              docker compose -f docker-compose.prod.yml logs flight
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          # Проверяем Ticket
+          echo "Checking Ticket service..."
+          for i in {1..60}; do
+            if curl -f http://localhost:$TICKET_PORT/docs > /dev/null 2>&1; then
+              echo "✅ Ticket is ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ Ticket service is not ready!"
+              docker compose -f docker-compose.prod.yml logs ticket
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          # Проверяем Bonus
+          echo "Checking Bonus service..."
+          for i in {1..60}; do
+            if curl -f http://localhost:$BONUS_PORT/docs > /dev/null 2>&1; then
+              echo "✅ Bonus is ready!"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ Bonus service is not ready!"
+              docker compose -f docker-compose.prod.yml logs bonus
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          # Проверяем Gateway (последним, так как он зависит от других)
+          echo "Checking Gateway service..."
           for i in {1..60}; do
             if curl -f http://localhost:$GATEWAY_PORT/docs > /dev/null 2>&1; then
               echo "✅ Gateway is ready!"
               break
             fi
+            if [ $i -eq 60 ]; then
+              echo "❌ Gateway is not accessible after waiting!"
+              docker compose -f docker-compose.prod.yml logs
+              exit 1
+            fi
             echo "Waiting for Gateway... ($i/60)"
             sleep 2
           done
           
-          # Проверяем, что Gateway действительно доступен
-          if ! curl -f http://localhost:$GATEWAY_PORT/docs > /dev/null 2>&1; then
-            echo "❌ Gateway is not accessible after waiting!"
-            docker compose -f docker-compose.prod.yml logs
-            exit 1
-          fi
+          # Дополнительная пауза для полной инициализации
+          echo "Waiting additional 10 seconds for full initialization..."
+          sleep 10
+          
+          # Финальная проверка всех сервисов
+          echo "Final health check:"
+          curl -f http://localhost:$FLIGHT_PORT/docs > /dev/null 2>&1 && echo "✅ Flight OK" || (echo "❌ Flight failed" && docker compose -f docker-compose.prod.yml logs flight --tail=50)
+          curl -f http://localhost:$TICKET_PORT/docs > /dev/null 2>&1 && echo "✅ Ticket OK" || (echo "❌ Ticket failed" && docker compose -f docker-compose.prod.yml logs ticket --tail=50)
+          curl -f http://localhost:$BONUS_PORT/docs > /dev/null 2>&1 && echo "✅ Bonus OK" || (echo "❌ Bonus failed" && docker compose -f docker-compose.prod.yml logs bonus --tail=50)
+          curl -f http://localhost:$GATEWAY_PORT/docs > /dev/null 2>&1 && echo "✅ Gateway OK" || (echo "❌ Gateway failed" && docker compose -f docker-compose.prod.yml logs gateway --tail=50)
 
       - name: Run Postman tests
         env:
@@ -201,15 +282,23 @@ jobs:
           EOF
           
           echo "Running Postman tests against http://localhost:$GATEWAY_PORT"
+          echo "Service status before tests:"
+          cd v1 && docker compose -f docker-compose.prod.yml ps
           
           # Запускаем Postman тесты
           newman run v1/postman/collection.json \
             -e /tmp/postman-env.json \
             --reporters cli,html \
             --reporter-html-export postman-report.html \
-            --timeout-request 10000 \
-            --delay-request 500 \
-            --bail || exit 1
+            --timeout-request 30000 \
+            --delay-request 1000 \
+            --bail || {
+              echo "❌ Postman tests failed!"
+              echo "Service logs:"
+              cd v1
+              docker compose -f docker-compose.prod.yml logs --tail=100
+              exit 1
+            }
           
       - name: Upload Postman report
         if: always()
